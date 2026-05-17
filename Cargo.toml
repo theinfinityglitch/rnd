@@ -1,3 +1,23 @@
+[workspace]
+members = ["rndctl"]
+
+[workspace.dependencies]
+rnd = { path = "." }
+gtk4 = { version = "0.11", features = ["v4_8"] }
+async-channel = "2"
+gtk4-layer-shell = { version = "0.8", features = ["v1_3"] }
+zbus = { version = "4", default-features = false, features = ["tokio"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+dirs = "5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+reqwest = { version = "0.11", features = ["blocking", "rustls-tls"] }
+libc = "0.2"
+sd-notify = "0.5.0"
+
 [package]
 name = "rnd"
 version = "0.1.0"
@@ -10,43 +30,17 @@ name = "rnd"
 path = "src/main.rs"
 
 [dependencies]
-gtk4 = { version = "0.11", features = ["v4_8"] }
-
-# async_channel integrates cleanly with glib's MainContext executor.
-# glib 0.20+ dropped glib::Sender / MainContext::channel in favour of this.
-async-channel = "2"
-
-# Wayland layer-shell. Feature flag tracks the wlr-layer-shell protocol version.
-gtk4-layer-shell = { version = "0.8", features = ["v1_3"] }
-
-# D-Bus (tokio-backed)
-zbus = { version = "4", default-features = false, features = ["tokio"] }
-
-# Tokio — lives on the D-Bus thread only; GTK owns the main thread
-tokio = { version = "1", features = ["full"] }
-
-# Config & serialisation
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-toml = "0.8"
-
-# XDG dirs
-dirs = "5"
-
-# Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# HTTP fetching for remote notification icons
-reqwest = { version = "0.11", features = ["blocking", "rustls-tls"] }
-
-# UNIX signal constants (SIGHUP etc.) for ignoring terminal close events.
-# Only used on Unix targets.
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
-
-# sd_notify — sends READY=1 to systemd after D-Bus registration succeeds.
-# This makes `systemctl --user start rnd` block until rnd is actually ready,
-# fixing the race condition with notify-send in Hyprland's config.
-[target.'cfg(unix)'.dependencies.sd-notify]
-version = "0.5.0"
+gtk4.workspace = true
+async-channel.workspace = true
+gtk4-layer-shell.workspace = true
+zbus.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+dirs.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+reqwest.workspace = true
+libc.workspace = true
+sd-notify.workspace = true

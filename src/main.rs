@@ -1,8 +1,4 @@
-mod app;
-mod config;
-mod dbus;
-mod history;
-mod notification;
+use rnd::*;
 
 use std::sync::{mpsc::sync_channel, Arc};
 
