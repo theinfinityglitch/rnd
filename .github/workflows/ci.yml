@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
     tags: [ 'v*' ]
 
 jobs:
   build:
-    name: Build (push to master)
+    name: Build (push to main)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

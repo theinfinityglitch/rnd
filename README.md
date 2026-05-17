@@ -1,5 +1,7 @@
 # rnd — Rust Notification Daemon
 
+[![CI](https://github.com/theinfinityglitch/rnd/actions/workflows/ci.yml/badge.svg)](https://github.com/theinfinityglitch/rnd/actions/workflows/ci.yml)
+
 A GTK4-based Wayland notification daemon implementing the
 [FDO Desktop Notifications spec](https://specifications.freedesktop.org/notification-spec/latest/).
 Built as a drop-in replacement for Dunst, styled with CSS, and extensible via a TOML config file.
