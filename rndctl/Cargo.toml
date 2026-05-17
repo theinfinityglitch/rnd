@@ -5,3 +5,9 @@ edition = "2024"
 
 [dependencies]
 rnd.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+dirs.workspace = true
+zbus.workspace = true
+tokio.workspace = true

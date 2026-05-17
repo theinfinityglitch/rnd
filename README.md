@@ -98,6 +98,29 @@ newest-first. Each entry contains: `id`, `app_name`, `app_icon`, `summary`,
 `body`, `urgency`, `timestamp`.
 
 Your launcher (rofi, fuzzel, etc.) can read this file directly or you can build
+
+## Command-line control with `rndctl`
+
+A small companion binary is available at `rndctl`, which talks to the daemon via
+`org.freedesktop.Notifications` and the persisted history file.
+
+Example usage:
+
+```bash
+cargo run -p rndctl -- close 42
+cargo run -p rndctl -- close-all
+cargo run -p rndctl -- history
+cargo run -p rndctl -- history --limit 20
+cargo run -p rndctl -- history clear
+cargo run -p rndctl -- info
+cargo run -p rndctl -- capabilities
+```
+
+If you install the workspace, `rndctl` is available alongside `rnd`.
+
+Your launcher can use `rndctl history` or read the history file directly.
+
+Your launcher (rofi, fuzzel, etc.) can read this file directly or you can build
 a small wrapper script around it.
 
 ## Replacing Dunst
