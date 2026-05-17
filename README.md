@@ -143,6 +143,38 @@ rndctl commands for full drop-in compatibility.
 
 If you install the workspace, `rndctl` is available alongside `rnd`.
 
+## Install & uninstall (now built into `rnd`)
+
+You can install `rnd` (and optionally `rndctl`) from the built binary itself.
+
+Install (default: enable and start the user service):
+
+```bash
+# from project root after building
+./target/release/rnd --install
+
+# install but don't start the service immediately
+./target/release/rnd --install --no-start
+```
+
+Install only the companion `rndctl` (auto-discovers `target/release/rndctl` unless
+you provide `--rndctl-path=`):
+
+```bash
+./target/release/rnd --install-rndctl
+# or specify exact path
+./target/release/rnd --install-rndctl --rndctl-path=/path/to/rndctl
+```
+
+Uninstall (interactive confirmation; skip prompt with `--yes`):
+
+```bash
+./target/release/rnd --uninstall
+./target/release/rnd --uninstall --yes
+```
+
+Note: `install.sh` was removed — use the above runtime flags instead.
+
 ## Replacing Dunst
 
 1. Stop / disable Dunst:

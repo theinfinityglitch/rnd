@@ -16,6 +16,24 @@ fn main() {
     // CLI helpers: install, install-rndctl, uninstall
     let args: Vec<String> = env::args().collect();
     if args.iter().any(|a| a == "--uninstall") {
+        let skip_confirm = args.iter().any(|a| a == "--yes");
+        if !skip_confirm {
+            use std::io::{self, Write};
+            eprint!("Are you sure you want to uninstall rnd and remove installed files? [y/N] ");
+            io::stdout().flush().ok();
+            let mut line = String::new();
+            if let Ok(_) = io::stdin().read_line(&mut line) {
+                let ans = line.trim().to_lowercase();
+                if ans != "y" && ans != "yes" {
+                    println!("Uninstall aborted.");
+                    return;
+                }
+            } else {
+                println!("Failed to read input; aborting.");
+                return;
+            }
+        }
+
         if let Err(e) = do_uninstall() {
             eprintln!("Uninstall failed: {}", e);
             std::process::exit(1);
