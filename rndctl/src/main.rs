@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use serde_json::Value;
 use std::error::Error;
 use zbus::Proxy;
 
@@ -114,26 +115,34 @@ async fn invoke_action(id: u32, action_key: String) -> Result<(), Box<dyn Error>
 
 async fn print_history(limit: Option<usize>) -> Result<(), Box<dyn Error>> {
     let proxy = control_proxy().await?;
-    let message = proxy.call_method("GetHistory", &()).await?;
-    let entries = message
+    let result: String = proxy
+        .call_method("GetHistory", &())
+        .await?
         .body()
-        .deserialize_unchecked::<Vec<(u32, String, String, String, String, u64)>>()?;
+        .deserialize_unchecked()?;
 
-    if entries.is_empty() {
-        println!("No history entries found.");
-        return Ok(());
-    }
-
-    let limit = limit.unwrap_or(entries.len());
-    for (id, app_name, _app_icon, summary, body, timestamp) in entries.into_iter().take(limit) {
-        println!("[{}] {} | {}", id, app_name, summary);
-        if !body.is_empty() {
-            println!("    {}", body);
+    if let Some(limit) = limit {
+        if let Ok(mut value) = serde_json::from_str::<Value>(&result) {
+            if let Some(data) = value.get_mut("data") {
+                if let Some(array) = data.as_array_mut() {
+                    if let Some(notifs) = array.get_mut(0).and_then(|v| v.as_array_mut()) {
+                        notif_limit_slice(notifs, limit);
+                    }
+                }
+            }
+            println!("{}", serde_json::to_string_pretty(&value)?);
+            return Ok(());
         }
-        println!("    timestamp={}", timestamp);
     }
 
+    println!("{}", result);
     Ok(())
+}
+
+fn notif_limit_slice(notifs: &mut Vec<Value>, limit: usize) {
+    if notifs.len() > limit {
+        notifs.truncate(limit);
+    }
 }
 
 async fn clear_history() -> Result<(), Box<dyn Error>> {

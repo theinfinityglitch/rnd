@@ -107,7 +107,8 @@ daemon.
 ## Command-line control with `rndctl`
 
 A small companion binary is available at `rndctl`, which talks to the daemon via
-`org.freedesktop.Notifications` and the persisted history file.
+D-Bus. It provides dunstctl-compatible commands for managing notifications and
+querying history.
 
 Example usage:
 
@@ -122,12 +123,25 @@ cargo run -p rndctl -- info
 cargo run -p rndctl -- capabilities
 ```
 
+The `history` command outputs JSON in dunstctl-compatible format:
+
+```json
+[
+  {
+    "id": 1,
+    "appname": "example-app",
+    "icon": "/path/to/icon.png",
+    "summary": "Notification summary",
+    "body": "Notification body text",
+    "urgency": 1
+  }
+]
+```
+
+This allows you to parse and replace dunstctl-based notification centers with
+rndctl commands for full drop-in compatibility.
+
 If you install the workspace, `rndctl` is available alongside `rnd`.
-
-Your launcher can use `rndctl history` or read the history file directly.
-
-Your launcher (rofi, fuzzel, etc.) can read this file directly or you can build
-a small wrapper script around it.
 
 ## Replacing Dunst
 

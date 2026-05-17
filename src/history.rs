@@ -19,6 +19,7 @@ pub struct HistoryEntry {
     pub body: String,
     pub urgency: crate::notification::Urgency,
     pub timestamp: u64,
+    pub expire_timeout: i32,
 }
 
 impl From<&Notification> for HistoryEntry {
@@ -31,6 +32,7 @@ impl From<&Notification> for HistoryEntry {
             body: n.body.clone(),
             urgency: n.urgency,
             timestamp: n.timestamp,
+            expire_timeout: n.expire_timeout,
         }
     }
 }

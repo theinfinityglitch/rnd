@@ -115,22 +115,92 @@ struct ControlServer {
 
 #[interface(name = "org.rnd.Control")]
 impl ControlServer {
-    async fn get_history(&self) -> Vec<(u32, String, String, String, String, u64)> {
+    async fn get_history(&self) -> String {
         let history = self.history.lock().unwrap();
-        history
-            .all_entries()
-            .into_iter()
-            .map(|entry| {
-                (
-                    entry.id,
-                    entry.app_name,
-                    entry.app_icon,
-                    entry.summary,
-                    entry.body,
-                    entry.timestamp,
-                )
-            })
-            .collect()
+        let mut notifications = Vec::new();
+
+        for entry in history.all_entries() {
+            let urgency_str = match entry.urgency {
+                crate::notification::Urgency::Low => "LOW",
+                crate::notification::Urgency::Normal => "NORMAL",
+                crate::notification::Urgency::Critical => "CRITICAL",
+            };
+
+            let timeout_us = if entry.expire_timeout > 0 {
+                (entry.expire_timeout as i64) * 1000
+            } else {
+                entry.expire_timeout as i64
+            };
+
+            let mut notif = serde_json::Map::new();
+            notif.insert(
+                "body".to_string(),
+                serde_json::json!({"type": "s", "data": entry.body}),
+            );
+            notif.insert(
+                "message".to_string(),
+                serde_json::json!({
+                    "type": "s",
+                    "data": format!("<b>{}</b>\n{}", entry.summary, entry.body)
+                }),
+            );
+            notif.insert(
+                "summary".to_string(),
+                serde_json::json!({"type": "s", "data": entry.summary}),
+            );
+            notif.insert(
+                "appname".to_string(),
+                serde_json::json!({"type": "s", "data": entry.app_name}),
+            );
+            notif.insert(
+                "category".to_string(),
+                serde_json::json!({"type": "s", "data": ""}),
+            );
+            notif.insert(
+                "default_action_name".to_string(),
+                serde_json::json!({"type": "s", "data": "default"}),
+            );
+            notif.insert(
+                "icon_path".to_string(),
+                serde_json::json!({"type": "s", "data": entry.app_icon}),
+            );
+            notif.insert(
+                "id".to_string(),
+                serde_json::json!({"type": "i", "data": entry.id}),
+            );
+            notif.insert(
+                "timestamp".to_string(),
+                serde_json::json!({"type": "x", "data": (entry.timestamp as i64) * 1_000_000}),
+            );
+            notif.insert(
+                "timeout".to_string(),
+                serde_json::json!({"type": "x", "data": timeout_us}),
+            );
+            notif.insert(
+                "progress".to_string(),
+                serde_json::json!({"type": "i", "data": -1}),
+            );
+            notif.insert(
+                "urgency".to_string(),
+                serde_json::json!({"type": "s", "data": urgency_str}),
+            );
+            notif.insert(
+                "stack_tag".to_string(),
+                serde_json::json!({"type": "s", "data": ""}),
+            );
+            notif.insert(
+                "urls".to_string(),
+                serde_json::json!({"type": "s", "data": ""}),
+            );
+
+            notifications.push(serde_json::Value::Object(notif));
+        }
+
+        serde_json::to_string_pretty(&serde_json::json!({
+            "type": "aa{sv}",
+            "data": [notifications],
+        }))
+        .unwrap_or_else(|_| "{\"type\": \"aa{sv}\", \"data\": [[]]}".to_string())
     }
 
     async fn clear_history(&self) {
@@ -209,8 +279,7 @@ pub async fn run(
                 history: Arc::clone(&history),
             };
             builder.serve_at("/org/rnd/Control", control)
-        })
-    {
+        }) {
         Ok(builder) => builder,
         Err(err) => {
             let _ = startup_tx.send(Err(err.to_string()));
