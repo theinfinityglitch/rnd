@@ -115,8 +115,8 @@ a small wrapper script around it.
 
 - [ ] Per-app timeout / urgency rules in config
 - [ ] `notify-send`-style CLI client to query history or close notifications
-- [ ] D-Bus activation (socket-activated via systemd user unit)
-- [ ] Image-data hint support (inline images in notifications)
+- [x] D-Bus activation (socket-activated via systemd user unit)
+- [x] Image-data hint support (inline images in notifications)
 - [ ] Animation (slide-in / fade-out via GTK4 transitions)
 - [ ] Sound support via PipeWire / libcanberra
 
