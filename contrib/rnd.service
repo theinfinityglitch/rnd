@@ -1,0 +1,31 @@
+# systemd user service for rnd
+#
+# Install:  cp contrib/rnd.service ~/.config/systemd/user/
+#           systemctl --user daemon-reload
+#           systemctl --user enable --now rnd
+#
+# Or use the provided install.sh script.
+
+[Unit]
+Description=rnd — GTK4 Wayland Notification Daemon
+# Slot into the standard graphical session target that most Wayland compositors
+# (including Hyprland with its systemd integration) activate.
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=notify
+# Adjust the path if you installed rnd somewhere other than ~/.cargo/bin.
+ExecStart=%h/.cargo/bin/rnd
+
+# Restart automatically on crash so the D-Bus name is reclaimed quickly.
+Restart=on-failure
+RestartSec=2s
+
+# Propagate the Wayland/D-Bus environment from the compositor session.
+# Hyprland exports these via dbus-update-activation-environment; other
+# compositors behave similarly.
+PassEnvironment=WAYLAND_DISPLAY DISPLAY DBUS_SESSION_BUS_ADDRESS XDG_RUNTIME_DIR XDG_CURRENT_DESKTOP
+
+[Install]
+WantedBy=graphical-session.target

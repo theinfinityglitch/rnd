@@ -1,0 +1,47 @@
+# rnd configuration file
+# Place at ~/.config/rnd/config.toml
+# All values shown here are the built-in defaults.
+
+[general]
+# Maximum notifications shown on screen simultaneously.
+# When the limit is hit the oldest visible notification is removed.
+max_visible = 5
+
+# Number of entries to keep in the notification history.
+history_size = 100
+
+# Write history to ~/.local/share/rnd/history.json
+persist_history = true
+
+# Screen corner for the notification stack.
+# Options: top_right | top_left | top_center | bottom_right | bottom_left | bottom_center
+anchor = "top_right"
+
+# Gap (pixels) between the screen edge and the notification stack.
+margin = 12
+
+# Vertical gap (pixels) between notification cards.
+gap = 6
+
+[timeouts]
+# Auto-dismiss timeout in milliseconds for low-urgency notifications.
+low = 4000
+
+# Auto-dismiss timeout in milliseconds for normal-urgency notifications.
+normal = 6000
+
+# Critical-urgency notifications are never auto-dismissed by default
+# (unless the sending app specifies a positive expire_timeout).
+
+[appearance]
+# Minimum width of a notification card (pixels).
+min_width = 300
+
+# Maximum width of a notification card (pixels).
+max_width = 420
+
+# Show the application name above the summary.
+show_app_name = true
+
+# Render action buttons on the card.
+show_actions = true

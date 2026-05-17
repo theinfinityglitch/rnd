@@ -1,0 +1,24 @@
+# D-Bus session service activation file for rnd.
+#
+# Place at ~/.local/share/dbus-1/services/org.freedesktop.Notifications.service
+#
+# This OVERRIDES the system-wide file installed by Dunst/Mako/etc. at
+# /usr/share/dbus-1/services/ — user-local service files have higher priority.
+# It means: when a notification arrives and no daemon holds the name yet,
+# D-Bus will start rnd (via systemd) instead of your distro's default daemon.
+#
+# Without this file, closing rnd and sending a notification causes D-Bus to
+# auto-activate Dunst from its system service file — which is why Dunst
+# "takes over" after rnd exits.
+#
+# Use install.sh to deploy this with the correct binary path substituted in.
+
+[D-BUS Service]
+Name=org.freedesktop.Notifications
+# Exec is required by the D-Bus spec; it is used as a fallback if systemd
+# activation is unavailable. The install script rewrites @@RND_BIN@@ to the
+# actual absolute path of your rnd binary.
+Exec=@@RND_BIN@@
+# SystemdService makes D-Bus delegate startup to the user service, which
+# handles environment setup and crash recovery properly.
+SystemdService=rnd.service
