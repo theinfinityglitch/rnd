@@ -1,14 +1,12 @@
 use clap::{Parser, Subcommand};
-use serde::Deserialize;
-use std::collections::HashSet;
 use std::error::Error;
-use std::fs;
-use std::path::PathBuf;
 use zbus::Proxy;
 
 const DBUS_DESTINATION: &str = "org.freedesktop.Notifications";
 const DBUS_PATH: &str = "/org/freedesktop/Notifications";
 const DBUS_INTERFACE: &str = "org.freedesktop.Notifications";
+const CONTROL_PATH: &str = "/org/rnd/Control";
+const CONTROL_INTERFACE: &str = "org.rnd.Control";
 
 #[derive(Parser)]
 #[command(name = "rndctl")]
@@ -25,8 +23,15 @@ enum Command {
         /// Notification ID to close
         id: u32,
     },
-    /// Close all notifications tracked by rnd
+    /// Close all active notifications
     CloseAll,
+    /// Invoke an action on an active notification
+    Action {
+        /// Notification ID
+        id: u32,
+        /// Action key to invoke
+        action_key: String,
+    },
     /// Read or clear the notification history
     History {
         #[command(subcommand)]
@@ -43,20 +48,8 @@ enum Command {
 
 #[derive(Subcommand)]
 enum HistoryCommand {
-    /// Clear persisted history
+    /// Clear the in-memory history
     Clear,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Deserialize)]
-struct HistoryEntry {
-    id: u32,
-    app_name: String,
-    app_icon: String,
-    summary: String,
-    body: String,
-    urgency: String,
-    timestamp: u64,
 }
 
 #[tokio::main]
@@ -66,9 +59,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match cli.command {
         Command::Close { id } => close_notification(id).await?,
         Command::CloseAll => close_all().await?,
+        Command::Action { id, action_key } => invoke_action(id, action_key).await?,
         Command::History { subcommand, limit } => match subcommand {
-            Some(HistoryCommand::Clear) => clear_history()?,
-            None => print_history(limit)?,
+            Some(HistoryCommand::Clear) => clear_history().await?,
+            None => print_history(limit).await?,
         },
         Command::Info => print_server_info().await?,
         Command::Capabilities => print_capabilities().await?,
@@ -83,6 +77,18 @@ async fn notification_proxy() -> Result<Proxy<'static>, Box<dyn Error>> {
     Ok(proxy)
 }
 
+async fn control_proxy() -> Result<Proxy<'static>, Box<dyn Error>> {
+    let connection = zbus::Connection::session().await?;
+    let proxy = Proxy::new(
+        &connection,
+        DBUS_DESTINATION,
+        CONTROL_PATH,
+        CONTROL_INTERFACE,
+    )
+    .await?;
+    Ok(proxy)
+}
+
 async fn close_notification(id: u32) -> Result<(), Box<dyn Error>> {
     let proxy = notification_proxy().await?;
     proxy.call_method("CloseNotification", &(id)).await?;
@@ -91,57 +97,27 @@ async fn close_notification(id: u32) -> Result<(), Box<dyn Error>> {
 }
 
 async fn close_all() -> Result<(), Box<dyn Error>> {
-    let ids = match read_history_ids() {
-        Ok(ids) => ids,
-        Err(_) => Vec::new(),
-    };
-
-    if ids.is_empty() {
-        println!("No persisted notification history found. Nothing to close.");
-        return Ok(());
-    }
-
-    let proxy = notification_proxy().await?;
-    for id in ids {
-        if let Err(err) = proxy.call_method("CloseNotification", &(id)).await {
-            eprintln!("Warning: failed to close {}: {}", id, err);
-        }
-    }
-
-    println!("Requested close for all notifications from history.");
+    let proxy = control_proxy().await?;
+    proxy.call_method("CloseAllNotifications", &()).await?;
+    println!("Requested close for all active notifications.");
     Ok(())
 }
 
-fn history_path() -> PathBuf {
-    dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("rnd")
-        .join("history.json")
+async fn invoke_action(id: u32, action_key: String) -> Result<(), Box<dyn Error>> {
+    let proxy = control_proxy().await?;
+    proxy
+        .call_method("InvokeAction", &(id, action_key.clone()))
+        .await?;
+    println!("Invoked action {} on notification {}", action_key, id);
+    Ok(())
 }
 
-fn read_history_entries() -> Result<Vec<HistoryEntry>, Box<dyn Error>> {
-    let path = history_path();
-    let content = fs::read_to_string(&path)?;
-    let entries: Vec<HistoryEntry> = serde_json::from_str(&content)?;
-    Ok(entries)
-}
-
-fn read_history_ids() -> Result<Vec<u32>, Box<dyn Error>> {
-    let entries = read_history_entries()?;
-    let ids: HashSet<u32> = entries.into_iter().map(|entry| entry.id).collect();
-    let mut ids: Vec<u32> = ids.into_iter().collect();
-    ids.sort_unstable();
-    Ok(ids)
-}
-
-fn print_history(limit: Option<usize>) -> Result<(), Box<dyn Error>> {
-    let entries = match read_history_entries() {
-        Ok(e) => e,
-        Err(err) => {
-            eprintln!("Failed to read history: {}", err);
-            return Ok(());
-        }
-    };
+async fn print_history(limit: Option<usize>) -> Result<(), Box<dyn Error>> {
+    let proxy = control_proxy().await?;
+    let message = proxy.call_method("GetHistory", &()).await?;
+    let entries = message
+        .body()
+        .deserialize_unchecked::<Vec<(u32, String, String, String, String, u64)>>()?;
 
     if entries.is_empty() {
         println!("No history entries found.");
@@ -149,30 +125,20 @@ fn print_history(limit: Option<usize>) -> Result<(), Box<dyn Error>> {
     }
 
     let limit = limit.unwrap_or(entries.len());
-    for entry in entries.into_iter().take(limit) {
-        println!(
-            "[{}] {} | {} | {}",
-            entry.id, entry.urgency, entry.app_name, entry.summary
-        );
-        if !entry.body.is_empty() {
-            println!("    {}", entry.body);
+    for (id, app_name, _app_icon, summary, body, timestamp) in entries.into_iter().take(limit) {
+        println!("[{}] {} | {}", id, app_name, summary);
+        if !body.is_empty() {
+            println!("    {}", body);
         }
+        println!("    timestamp={}", timestamp);
     }
 
     Ok(())
 }
 
-fn clear_history() -> Result<(), Box<dyn Error>> {
-    let path = history_path();
-    if !path.exists() {
-        println!("History already empty.");
-        return Ok(());
-    }
-
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(path, "[]")?;
+async fn clear_history() -> Result<(), Box<dyn Error>> {
+    let proxy = control_proxy().await?;
+    proxy.call_method("ClearHistory", &()).await?;
     println!("History cleared.");
     Ok(())
 }

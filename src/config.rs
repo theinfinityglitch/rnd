@@ -85,7 +85,7 @@ impl Default for GeneralConfig {
         Self {
             max_visible: 5,
             history_size: 100,
-            persist_history: true,
+            persist_history: false,
             anchor: Anchor::TopRight,
             margin: 12,
             gap: 6,

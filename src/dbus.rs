@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use async_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
 use zbus::interface;
 use zbus::zvariant::{OwnedValue, Structure};
 
+use crate::history::History;
 use crate::notification::Notification;
 
 // ── Cross-thread messages ─────────────────────────────────────────────────────
@@ -15,6 +16,9 @@ use crate::notification::Notification;
 pub enum DaemonEvent {
     Show(Notification),
     Close(u32),
+    CloseAll,
+    InvokeAction { id: u32, action_key: String },
+    ClearHistory,
 }
 
 #[derive(Debug)]
@@ -104,6 +108,47 @@ impl NotificationServer {
     }
 }
 
+struct ControlServer {
+    tx: Sender<DaemonEvent>,
+    history: Arc<Mutex<History>>,
+}
+
+#[interface(name = "org.rnd.Control")]
+impl ControlServer {
+    async fn get_history(&self) -> Vec<(u32, String, String, String, String, u64)> {
+        let history = self.history.lock().unwrap();
+        history
+            .all_entries()
+            .into_iter()
+            .map(|entry| {
+                (
+                    entry.id,
+                    entry.app_name,
+                    entry.app_icon,
+                    entry.summary,
+                    entry.body,
+                    entry.timestamp,
+                )
+            })
+            .collect()
+    }
+
+    async fn clear_history(&self) {
+        self.history.lock().unwrap().clear();
+    }
+
+    async fn close_all_notifications(&self) {
+        self.tx.send(DaemonEvent::CloseAll).await.ok();
+    }
+
+    async fn invoke_action(&self, id: u32, action_key: String) {
+        self.tx
+            .send(DaemonEvent::InvokeAction { id, action_key })
+            .await
+            .ok();
+    }
+}
+
 fn summarize_hint_value(value: &OwnedValue) -> String {
     if let Ok(ov) = value.try_clone() {
         if let Ok(s) = String::try_from(ov) {
@@ -148,15 +193,23 @@ pub async fn run(
     event_tx: Sender<DaemonEvent>,
     mut signal_rx: UnboundedReceiver<DaemonSignal>,
     startup_tx: std::sync::mpsc::SyncSender<Result<(), String>>,
+    history: Arc<Mutex<History>>,
 ) -> zbus::Result<()> {
     let server = NotificationServer {
-        tx: event_tx,
+        tx: event_tx.clone(),
         next_id: Arc::new(AtomicU32::new(1)),
     };
 
     let builder = match zbus::connection::Builder::session()
         .and_then(|builder| builder.name("org.freedesktop.Notifications"))
         .and_then(|builder| builder.serve_at("/org/freedesktop/Notifications", server))
+        .and_then(|builder| {
+            let control = ControlServer {
+                tx: event_tx.clone(),
+                history: Arc::clone(&history),
+            };
+            builder.serve_at("/org/rnd/Control", control)
+        })
     {
         Ok(builder) => builder,
         Err(err) => {

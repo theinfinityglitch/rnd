@@ -11,7 +11,8 @@ max_visible = 5
 history_size = 100
 
 # Write history to ~/.local/share/rnd/history.json
-persist_history = true
+# Set to false for in-memory, session-only history.
+persist_history = false
 
 # Screen corner for the notification stack.
 # Options: top_right | top_left | top_center | bottom_right | bottom_left | bottom_center

@@ -1,6 +1,6 @@
 use rnd::*;
 
-use std::sync::{mpsc::sync_channel, Arc};
+use std::sync::{mpsc::sync_channel, Arc, Mutex};
 
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -45,7 +45,13 @@ fn activate(app: &Application, config: Arc<config::Config>) {
     let (signal_tx, signal_rx) = tokio::sync::mpsc::unbounded_channel::<dbus::DaemonSignal>();
     let (startup_tx, startup_rx) = sync_channel::<Result<(), String>>(1);
 
+    let history = Arc::new(Mutex::new(history::History::new(
+        config.general.history_size,
+        config.general.persist_history,
+    )));
+
     // ── D-Bus thread ─────────────────────────────────────────────────────────
+    let history_for_dbus = Arc::clone(&history);
     std::thread::Builder::new()
         .name("dbus".into())
         .spawn(move || {
@@ -55,7 +61,7 @@ fn activate(app: &Application, config: Arc<config::Config>) {
                 .expect("tokio runtime");
 
             runtime.block_on(async move {
-                if let Err(e) = dbus::run(event_tx, signal_rx, startup_tx).await {
+                if let Err(e) = dbus::run(event_tx, signal_rx, startup_tx, history_for_dbus).await {
                     tracing::error!("D-Bus server error: {}", e);
                 }
             });
@@ -77,7 +83,7 @@ fn activate(app: &Application, config: Arc<config::Config>) {
     }
 
     // ── GTK side ─────────────────────────────────────────────────────────────
-    let manager = app::NotificationManager::new(app, config, signal_tx);
+    let manager = app::NotificationManager::new(app, config, signal_tx, Arc::clone(&history));
 
     // spawn_local runs on the GTK main thread's glib executor, so Rc<RefCell<>>
     // is safe here — no Send requirement.

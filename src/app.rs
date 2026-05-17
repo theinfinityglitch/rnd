@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use gtk4::gdk_pixbuf::{Colorspace, InterpType, Pixbuf, PixbufLoader};
 use gtk4::glib;
@@ -35,7 +35,7 @@ pub struct NotificationManager {
     window: ApplicationWindow,
     vbox: GBox,
     active: Vec<ActiveNotification>,
-    history: History,
+    history: Arc<Mutex<History>>,
     signal_tx: UnboundedSender<DaemonSignal>,
 }
 
@@ -44,10 +44,9 @@ impl NotificationManager {
         app: &Application,
         config: Arc<Config>,
         signal_tx: UnboundedSender<DaemonSignal>,
+        history: Arc<Mutex<History>>,
     ) -> Rc<RefCell<Self>> {
         let (window, vbox) = build_popup_window(app, &config);
-
-        let history = History::new(config.general.history_size, config.general.persist_history);
 
         Rc::new(RefCell::new(Self {
             config,
@@ -67,6 +66,15 @@ impl NotificationManager {
             DaemonEvent::Close(id) => {
                 mgr.borrow_mut()
                     .close(id, CloseReason::CloseNotificationCalled);
+            }
+            DaemonEvent::CloseAll => {
+                mgr.borrow_mut().close_all();
+            }
+            DaemonEvent::InvokeAction { id, action_key } => {
+                mgr.borrow_mut().invoke_action(id, action_key);
+            }
+            DaemonEvent::ClearHistory => {
+                mgr.borrow_mut().history.lock().unwrap().clear();
             }
         }
     }
@@ -93,7 +101,7 @@ impl NotificationManager {
                 }
             }
 
-            m.history.push(&notif);
+            m.history.lock().unwrap().push(&notif);
 
             let timeout_ms = notif.effective_timeout_ms(&m.config.timeouts);
             let widget = build_card(&notif, &m.config, mgr);
@@ -133,6 +141,13 @@ impl NotificationManager {
             reason: reason as u32,
         });
         self.sync_visibility();
+    }
+
+    pub fn close_all(&mut self) {
+        let ids: Vec<u32> = self.active.iter().map(|a| a.notif.id).collect();
+        for id in ids {
+            self.close(id, CloseReason::CloseNotificationCalled);
+        }
     }
 
     fn remove_widget(&mut self, id: u32) {

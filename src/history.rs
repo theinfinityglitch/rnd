@@ -47,6 +47,13 @@ pub struct History {
 impl History {
     pub fn new(max_size: usize, persist: bool) -> Self {
         let path = history_path();
+
+        if !persist && path.exists() {
+            if let Err(e) = std::fs::remove_file(&path) {
+                warn!("Cannot remove old history file: {}", e);
+            }
+        }
+
         let entries = if persist {
             load_from_disk(&path, max_size)
         } else {
@@ -59,6 +66,10 @@ impl History {
             persist,
             path,
         }
+    }
+
+    pub fn all_entries(&self) -> Vec<HistoryEntry> {
+        self.entries.iter().cloned().collect()
     }
 
     /// Push a new notification; evicts oldest entries beyond max_size.

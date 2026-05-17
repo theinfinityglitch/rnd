@@ -93,11 +93,16 @@ GTK4 CSS reference: <https://docs.gtk.org/gtk4/css-properties.html>
 
 ## Notification history
 
-History is written to `~/.local/share/rnd/history.json` as a JSON array sorted
-newest-first. Each entry contains: `id`, `app_name`, `app_icon`, `summary`,
-`body`, `urgency`, `timestamp`.
+By default `rnd` keeps history in memory for the current daemon session only.
+Set `persist_history = true` in `~/.config/rnd/config.toml` if you want history
+persisted to `~/.local/share/rnd/history.json`.
 
-Your launcher (rofi, fuzzel, etc.) can read this file directly or you can build
+History entries are sorted newest-first and contain: `id`, `app_name`,
+`app_icon`, `summary`, `body`, `urgency`, `timestamp`.
+
+Your launcher (rofi, fuzzel, etc.) can read the file directly when persistence
+is enabled, or use `rndctl history` to query session history from the running
+daemon.
 
 ## Command-line control with `rndctl`
 
@@ -109,6 +114,7 @@ Example usage:
 ```bash
 cargo run -p rndctl -- close 42
 cargo run -p rndctl -- close-all
+cargo run -p rndctl -- action 42 default
 cargo run -p rndctl -- history
 cargo run -p rndctl -- history --limit 20
 cargo run -p rndctl -- history clear
