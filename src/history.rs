@@ -69,11 +69,11 @@ impl History {
     }
 
     /// Push a new notification; evicts oldest entries beyond max_size.
-    pub fn push(&mut self, notif: &Notification) {
+    pub fn push(&mut self, notif: &HistoryEntry) {
         // Remove existing entry with same ID (replace scenario)
         self.entries.retain(|e| e.id != notif.id);
 
-        self.entries.push_front(HistoryEntry::from(notif));
+        self.entries.push_front(notif.clone());
 
         while self.entries.len() > self.max_size {
             self.entries.pop_back();

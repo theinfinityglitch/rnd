@@ -2,6 +2,7 @@ pub mod app;
 pub mod config;
 pub mod dbus;
 pub mod history;
+pub mod icon;
 pub mod installer;
 pub mod notification;
 
