@@ -3,7 +3,8 @@ members = ["rndctl"]
 
 [workspace.dependencies]
 rnd = { path = "." }
-gtk4 = { version = "0.11", features = ["v4_8"] }
+gtk4 = { version = "0.11", features = ["v4_12"] }
+adw = { version = "0.9.1", package = "libadwaita", features = ["v1_8"] }
 async-channel = "2"
 gtk4-layer-shell = { version = "0.8", features = ["v1_3"] }
 zbus = { version = "4", default-features = false, features = [
@@ -48,3 +49,4 @@ tracing-subscriber.workspace = true
 reqwest.workspace = true
 libc.workspace = true
 sd-notify.workspace = true
+adw.workspace = true

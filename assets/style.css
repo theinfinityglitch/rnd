@@ -1,9 +1,15 @@
-/* ── rnd default theme ────────────────────────────────────────────────────────
-   Override any rule in ~/.config/rnd/style.css — it loads at a higher priority.
+/* ── rnd — GNOME in-session banner style (dark) ──────────────────────────────
+   Targeting GNOME 45/46 aesthetic. Adwaita dark palette reference:
+     @window_bg_color   #242424     @card_bg_color      #2d2d2d
+     @view_bg_color     #1e1e1e     @headerbar_bg_color  #303030
+     @accent_color      #78aeed     @accent_bg_color     #3584e4
+     @destructive_color #ff7b63
+
+   Override any rule in ~/.config/rnd/style.css at higher priority.
    GTK4 CSS reference: https://docs.gtk.org/gtk4/css-properties.html
    ─────────────────────────────────────────────────────────────────────────── */
 
-/* The outer window is transparent so only the cards are visible. */
+/* Outer window is transparent — only the cards should be visible. */
 window#rnd-popup {
   background: transparent;
 }
@@ -12,113 +18,176 @@ window#rnd-popup {
   background: transparent;
 }
 
-/* ── Card ──────────────────────────────────────────────────────────────────── */
+
+/* ── Card ─────────────────────────────────────────────────────────────────────
+   Adwaita card background is #2d2d2d in dark mode. The border is a single
+   rgba white line at ~9% opacity — this is what separates Adwaita cards from
+   the window background without looking like a harsh outline.               */
 
 .notification {
-  background-color: #1e1e2e;
-  color: #cdd6f4;
-  border-radius: 8px;
-  border: 1px solid #313244;
-  padding: 12px 14px;
+  background-color: #2d2d2d;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 12px;
   min-width: 300px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  max-width: 432px;
+  /* GNOME Shell banner width ≈ 432px */
+
+  /* Three-layer shadow:
+     1. Tight black halo  — replaces a visible border on dark backgrounds
+     2. Short soft drop   — gives the card some lift
+     3. Long ambient blur — mimics the GNOME Shell panel glow              */
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.40),
+    0 2px 6px rgba(0, 0, 0, 0.32),
+    0 8px 28px rgba(0, 0, 0, 0.24);
 }
 
 .notification:hover {
-  background-color: #24273a;
-  border-color: #45475a;
+  background-color: #333333;
+  border-color: rgba(255, 255, 255, 0.13);
 }
 
-/* ── Urgency tinting ───────────────────────────────────────────────────────── */
+.notification:active {
+  background-color: #2a2a2a;
+}
+
+
+/* ── Urgency modifiers ────────────────────────────────────────────────────────
+   Low:      subtle fade, no colour accent
+   Normal:   base style (no modifier needed)
+   Critical: Adwaita destructive red tint — left stripe + border glow      */
 
 .notification.urgency-low {
-  opacity: 0.85;
+  opacity: 0.80;
 }
 
 .notification.urgency-critical {
-  background-color: #2a1e2e;
+  border-color: rgba(255, 123, 99, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.40),
+    0 2px 6px rgba(0, 0, 0, 0.32),
+    0 8px 28px rgba(0, 0, 0, 0.24),
+    inset 3px 0 0 0 #ff7b63;
+  /* left accent stripe */
 }
 
-/* ── App icon ──────────────────────────────────────────────────────────────── */
+
+/* ── App icon ─────────────────────────────────────────────────────────────────
+   GNOME banners use 48×48px icons. The container clips the image to a
+   rounded square; the Image widget fills it.                                */
+
+.notification-icon-container {
+  min-width: 48px;
+  min-height: 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  margin-right: 12px;
+}
 
 .notification-icon {
-  min-width: 64px;
-  min-height: 64px;
+  min-width: 48px;
+  min-height: 48px;
 }
 
-/* container that enforces rounding and clips the image */
-.notification-icon-container {
-  width: 64px;
-  height: 64px;
-  margin-right: 8px;
-  border-radius: 6px;
-}
 
-/* ── Text ──────────────────────────────────────────────────────────────────── */
+/* ── Text column ──────────────────────────────────────────────────────────────
+   GNOME typography hierarchy for notifications (dark):
+     App name  — 0.72em, weight 500, white 45%  (clearly secondary)
+     Summary   — 0.90em, weight 600, white 92%  (primary content)
+     Body      — 0.85em, weight 400, white 62%  (supporting detail)
+
+   GNOME does NOT uppercase app names in banners — that's a Dunst default.  */
 
 .notification-text {
   min-width: 0;
-  /* allows labels to truncate/wrap */
 }
 
 .notification-app-name {
-  font-size: 0.78em;
-  color: #6c7086;
+  font-size: 0.72em;
   font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
   margin-bottom: 1px;
 }
 
 .notification-summary {
-  font-size: 0.95em;
-  font-weight: 700;
-  color: #cdd6f4;
-  margin-bottom: 3px;
+  font-size: 0.90em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  margin-bottom: 2px;
 }
 
 .notification-body {
-  font-size: 0.88em;
-  color: #a6adc8;
-  line-height: 1.4;
+  font-size: 0.85em;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.45;
 }
 
-/* ── Close button ──────────────────────────────────────────────────────────── */
 
+/* ── Close button ─────────────────────────────────────────────────────────────
+   GNOME uses a circular icon button: transparent at rest, subtle fill on
+   hover. Uses "window-close-symbolic" from the icon theme.                  */
+
+/* .circular (applied in code) owns shape, padding and size — Adwaita handles
+   all of that. Only override colours and icon scale here; adding border-radius,
+   padding or min-width would fight .circular and make the button too large.  */
 .notification-close {
-  background: transparent;
-  border: none;
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.50);
   box-shadow: none;
-  color: #6c7086;
-  padding: 2px;
   min-width: 0;
   min-height: 0;
-  border-radius: 4px;
   margin-left: 4px;
+  padding: 6px;
+  -gtk-icon-size: 14px;
 }
 
 .notification-close:hover {
-  color: #f38ba8;
-  background-color: rgba(243, 139, 168, 0.12);
+  background-color: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.85);
 }
 
-/* ── Action buttons ────────────────────────────────────────────────────────── */
+.notification-close:active {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+
+/* ── Action buttons ───────────────────────────────────────────────────────────
+   Ghost-style at rest: transparent bg, white text, whisper border.
+   On hover they fill with Adwaita's @accent_bg_color (#3584e4).            */
 
 .notification-actions {
-  margin-top: 6px;
+  margin-top: 10px;
+  column-gap: 6px;
 }
 
 .notification-action {
   font-size: 0.82em;
-  padding: 3px 10px;
-  background-color: #313244;
-  color: #89b4fa;
-  border: 1px solid #45475a;
-  border-radius: 4px;
+  font-weight: 500;
+  padding: 5px 14px;
+
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 6px;
   box-shadow: none;
+
+  transition: background-color 100ms ease,
+    border-color 100ms ease,
+    color 100ms ease;
 }
 
 .notification-action:hover {
-  background-color: #89b4fa;
-  color: #1e1e2e;
+  background-color: #3584e4;
+  /* Adwaita @accent_bg_color */
+  border-color: #3584e4;
+  color: #ffffff;
+}
+
+.notification-action:active {
+  background-color: #2974d0;
+  /* accent darkened ~10% */
+  border-color: #2974d0;
 }

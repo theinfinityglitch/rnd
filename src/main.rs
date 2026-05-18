@@ -4,9 +4,9 @@ use std::env;
 use std::path::PathBuf;
 use std::sync::{mpsc::sync_channel, Arc, Mutex};
 
+use adw::Application;
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::Application;
 
 fn main() {
     // CLI helpers: install, install-rndctl, uninstall

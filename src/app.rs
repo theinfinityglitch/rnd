@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use adw::prelude::AdwApplicationWindowExt;
+use adw::{Application, ApplicationWindow};
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{
-    Application, ApplicationWindow, Box as GBox, Button, GestureClick, Label, Orientation, Widget,
-};
+use gtk4::{Box as GBox, Button, GestureClick, Label, Orientation, Widget};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -192,7 +192,7 @@ fn build_popup_window(app: &Application, config: &Config) -> (ApplicationWindow,
         .css_classes(vec!["notification-list"])
         .build();
 
-    window.set_child(Some(&vbox));
+    window.set_content(Some(&vbox));
     window.set_visible(false);
 
     (window, vbox)
@@ -343,7 +343,7 @@ fn build_card(
     // Close button
     let close_btn = Button::builder()
         .icon_name("window-close-symbolic")
-        .css_classes(vec!["notification-close"])
+        .css_classes(vec!["notification-close", "circular"])
         .valign(gtk4::Align::Start)
         .build();
 
