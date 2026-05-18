@@ -6,10 +6,6 @@ use tracing::{info, warn};
 
 use crate::notification::Notification;
 
-// ── Serialisable history entry ────────────────────────────────────────────────
-// We flatten Notification into a lighter struct for persistence —
-// OwnedValue (hints) doesn't implement Serialize generically.
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryEntry {
     pub id: u32,
@@ -36,8 +32,6 @@ impl From<&Notification> for HistoryEntry {
         }
     }
 }
-
-// ── History store ─────────────────────────────────────────────────────────────
 
 pub struct History {
     entries: VecDeque<HistoryEntry>,
@@ -125,8 +119,6 @@ impl History {
             None => self.pop(),
         }
     }
-
-    // ── Persistence ──────────────────────────────────────────────────────────
 
     fn save(&self) {
         if let Some(parent) = self.path.parent() {

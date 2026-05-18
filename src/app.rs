@@ -20,15 +20,11 @@ use crate::dbus::{DaemonEvent, DaemonSignal};
 use crate::history::History;
 use crate::notification::{CloseReason, Notification};
 
-// ── Active notification tracking ──────────────────────────────────────────────
-
 struct ActiveNotification {
     notif: Notification,
     widget: Widget,
     timeout_source: Option<glib::SourceId>,
 }
-
-// ── NotificationManager ───────────────────────────────────────────────────────
 
 pub struct NotificationManager {
     config: Arc<Config>,
@@ -58,8 +54,6 @@ impl NotificationManager {
         }))
     }
 
-    // ── Event dispatch ────────────────────────────────────────────────────────
-
     pub fn handle_event(mgr: &Rc<RefCell<Self>>, event: DaemonEvent) {
         match event {
             DaemonEvent::Show(notif) => Self::show(mgr, notif),
@@ -79,8 +73,6 @@ impl NotificationManager {
             }
         }
     }
-
-    // ── Show ──────────────────────────────────────────────────────────────────
 
     fn show(mgr: &Rc<RefCell<Self>>, notif: Notification) {
         {
@@ -133,8 +125,6 @@ impl NotificationManager {
         }
     }
 
-    // ── Close ─────────────────────────────────────────────────────────────────
-
     pub fn close(&mut self, id: u32, reason: CloseReason) {
         self.remove_widget(id);
         let _ = self.signal_tx.send(DaemonSignal::NotificationClosed {
@@ -170,8 +160,6 @@ impl NotificationManager {
         }
     }
 
-    // ── Action invoked ────────────────────────────────────────────────────────
-
     pub fn invoke_action(&mut self, id: u32, action_key: String) {
         let _ = self
             .signal_tx
@@ -179,8 +167,6 @@ impl NotificationManager {
         self.close(id, CloseReason::DismissedByUser);
     }
 }
-
-// ── Layer-shell window ────────────────────────────────────────────────────────
 
 fn build_popup_window(app: &Application, config: &Config) -> (ApplicationWindow, GBox) {
     let window = ApplicationWindow::builder()
@@ -251,8 +237,6 @@ fn apply_anchor(window: &ApplicationWindow, anchor: Anchor, margin: i32) {
         }
     }
 }
-
-// ── Notification card ─────────────────────────────────────────────────────────
 
 fn build_card(
     notif: &Notification,
@@ -390,8 +374,6 @@ fn build_card(
 
     card.upcast()
 }
-
-// ── Icon helper ───────────────────────────────────────────────────────────────
 
 fn build_icon(app_icon: &str, hints: &HashMap<String, OwnedValue>, config: &Config) -> Widget {
     // helper to wrap an Image in a container that enforces rounding/clipping

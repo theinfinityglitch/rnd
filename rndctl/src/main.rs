@@ -1,13 +1,10 @@
+use std::error::Error;
+
 use clap::{Parser, Subcommand};
 use serde_json::Value;
-use std::error::Error;
 use zbus::Proxy;
 
-const DBUS_DESTINATION: &str = "org.freedesktop.Notifications";
-const DBUS_PATH: &str = "/org/freedesktop/Notifications";
-const DBUS_INTERFACE: &str = "org.freedesktop.Notifications";
-const CONTROL_PATH: &str = "/org/rnd/Control";
-const CONTROL_INTERFACE: &str = "org.rnd.Control";
+use rnd::*;
 
 #[derive(Parser)]
 #[command(name = "rndctl")]

@@ -191,7 +191,7 @@ Note: `install.sh` was removed — use the above runtime flags instead.
 ## Roadmap ideas
 
 - [ ] Per-app timeout / urgency rules in config
-- [ ] `notify-send`-style CLI client to query history or close notifications
+- [x] `notify-send`-style CLI client to query history or close notifications
 - [x] D-Bus activation (socket-activated via systemd user unit)
 - [x] Image-data hint support (inline images in notifications)
 - [ ] Animation (slide-in / fade-out via GTK4 transitions)

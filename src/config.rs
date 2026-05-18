@@ -3,8 +3,6 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-// ── Top-level config ──────────────────────────────────────────────────────────
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Config {
@@ -60,8 +58,6 @@ fn config_path() -> PathBuf {
         .join("rnd")
         .join("config.toml")
 }
-
-// ── Sub-sections ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
@@ -135,8 +131,6 @@ impl Default for AppearanceConfig {
         }
     }
 }
-
-// ── Anchor ────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]

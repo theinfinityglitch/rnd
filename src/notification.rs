@@ -4,8 +4,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use zbus::zvariant::OwnedValue;
 
-// ── Urgency ───────────────────────────────────────────────────────────────────
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Urgency {
     Low,
@@ -38,11 +36,8 @@ impl Urgency {
     }
 }
 
-// ── Notification ──────────────────────────────────────────────────────────────
-//
-// NOTE: We do NOT derive Clone because zbus::zvariant::OwnedValue does not
+// NOTE: Do NOT derive Clone because zbus::zvariant::OwnedValue does not
 // implement Clone in all versions.  Notification is always moved, never cloned.
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Notification {
     pub id: u32,
@@ -51,15 +46,11 @@ pub struct Notification {
     pub app_icon: String,
     pub summary: String,
     pub body: String,
-    /// Pairs of (action_key, action_label).
     pub actions: Vec<(String, String)>,
-    /// Raw hints — skipped during serialisation (not needed in history).
     #[serde(skip)]
     pub hints: HashMap<String, OwnedValue>,
-    /// -1 = server default, 0 = never expire, >0 = milliseconds
     pub expire_timeout: i32,
     pub urgency: Urgency,
-    /// Unix timestamp (seconds) when the notification was received.
     pub timestamp: u64,
 }
 
@@ -115,8 +106,6 @@ impl Notification {
         }
     }
 }
-
-// ── Close reasons (FDO spec §3.6) ─────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy)]
 #[repr(u32)]

@@ -3,14 +3,14 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
 use async_channel::Sender;
+use sd_notify::NotifyState;
 use tokio::sync::mpsc::UnboundedReceiver;
 use zbus::interface;
 use zbus::zvariant::{OwnedValue, Structure};
 
 use crate::history::History;
 use crate::notification::Notification;
-
-// ── Cross-thread messages ─────────────────────────────────────────────────────
+use crate::*;
 
 #[derive(Debug)]
 pub enum DaemonEvent {
@@ -28,10 +28,7 @@ pub enum DaemonSignal {
     ActionInvoked { id: u32, action_key: String },
 }
 
-// ── D-Bus interface ───────────────────────────────────────────────────────────
-
 struct NotificationServer {
-    /// Sends events to the GTK main thread via an async_channel.
     tx: Sender<DaemonEvent>,
     next_id: Arc<AtomicU32>,
 }
@@ -260,8 +257,6 @@ fn summarize_hint_value(value: &OwnedValue) -> String {
     format!("{:?}", value)
 }
 
-// ── Entry point ───────────────────────────────────────────────────────────────
-
 pub async fn run(
     event_tx: Sender<DaemonEvent>,
     mut signal_rx: UnboundedReceiver<DaemonSignal>,
@@ -274,14 +269,14 @@ pub async fn run(
     };
 
     let builder = match zbus::connection::Builder::session()
-        .and_then(|builder| builder.name("org.freedesktop.Notifications"))
-        .and_then(|builder| builder.serve_at("/org/freedesktop/Notifications", server))
+        .and_then(|builder| builder.name(DBUS_INTERFACE))
+        .and_then(|builder| builder.serve_at(DBUS_PATH, server))
         .and_then(|builder| {
             let control = ControlServer {
                 tx: event_tx.clone(),
                 history: Arc::clone(&history),
             };
-            builder.serve_at("/org/rnd/Control", control)
+            builder.serve_at(CONTROL_PATH, control)
         }) {
         Ok(builder) => builder,
         Err(err) => {
@@ -299,13 +294,9 @@ pub async fn run(
     };
 
     let _ = startup_tx.send(Ok(()));
-    tracing::info!("D-Bus server registered as org.freedesktop.Notifications");
+    tracing::info!("D-Bus server registered as {DBUS_INTERFACE}");
 
-    #[cfg(unix)]
-    {
-        use sd_notify::NotifyState;
-        sd_notify::notify(&[NotifyState::Ready]).ok();
-    }
+    sd_notify::notify(&[NotifyState::Ready]).ok();
 
     let conn_sig = Arc::clone(&conn);
     tokio::spawn(async move {
@@ -333,12 +324,6 @@ where
     B: serde::Serialize + zbus::zvariant::DynamicType,
 {
     let dest: Option<zbus::names::BusName<'_>> = None;
-    conn.emit_signal(
-        dest,
-        "/org/freedesktop/Notifications",
-        "org.freedesktop.Notifications",
-        name,
-        body,
-    )
-    .await
+    conn.emit_signal(dest, DBUS_PATH, DBUS_INTERFACE, name, body)
+        .await
 }
