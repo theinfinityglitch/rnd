@@ -102,8 +102,11 @@ fn activate(app: &Application, config: Arc<config::Config>) {
         config.general.persist_history,
     )));
 
+    let pause_status = Arc::new(Mutex::new(false));
+
     // D-Bus thread
     let history_for_dbus = Arc::clone(&history);
+    let pause_status_for_dbus = Arc::clone(&pause_status);
     std::thread::Builder::new()
         .name("dbus".into())
         .spawn(move || {
@@ -113,7 +116,15 @@ fn activate(app: &Application, config: Arc<config::Config>) {
                 .expect("tokio runtime");
 
             runtime.block_on(async move {
-                if let Err(e) = dbus::run(event_tx, signal_rx, startup_tx, history_for_dbus).await {
+                if let Err(e) = dbus::run(
+                    event_tx,
+                    signal_rx,
+                    startup_tx,
+                    pause_status_for_dbus,
+                    history_for_dbus,
+                )
+                .await
+                {
                     tracing::error!("D-Bus server error: {}", e);
                 }
             });
@@ -135,7 +146,13 @@ fn activate(app: &Application, config: Arc<config::Config>) {
     }
 
     // GTK side
-    let manager = app::NotificationManager::new(app, config, signal_tx, Arc::clone(&history));
+    let manager = app::NotificationManager::new(
+        app,
+        config,
+        signal_tx,
+        Arc::clone(&pause_status),
+        Arc::clone(&history),
+    );
 
     glib::MainContext::default().spawn_local(async move {
         while let Ok(event) = event_rx.recv().await {

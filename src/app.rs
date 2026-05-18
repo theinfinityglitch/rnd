@@ -26,6 +26,7 @@ pub struct NotificationManager {
     config: Arc<Config>,
     window: ApplicationWindow,
     vbox: GBox,
+    status: Arc<Mutex<bool>>,
     active: Vec<ActiveNotification>,
     history: Arc<Mutex<History>>,
     signal_tx: UnboundedSender<DaemonSignal>,
@@ -36,6 +37,7 @@ impl NotificationManager {
         app: &Application,
         config: Arc<Config>,
         signal_tx: UnboundedSender<DaemonSignal>,
+        status: Arc<Mutex<bool>>,
         history: Arc<Mutex<History>>,
     ) -> Rc<RefCell<Self>> {
         let (window, vbox) = build_popup_window(app, &config);
@@ -44,6 +46,7 @@ impl NotificationManager {
             config,
             window,
             vbox,
+            status,
             active: Vec::new(),
             history,
             signal_tx,
@@ -63,10 +66,7 @@ impl NotificationManager {
             DaemonEvent::InvokeAction { id, action_key } => {
                 mgr.borrow_mut().invoke_action(id, action_key)
             }
-            DaemonEvent::ClearHistory => mgr.borrow_mut().history.lock().unwrap().clear(),
-            DaemonEvent::HistoryRemove { id } => {
-                mgr.borrow_mut().history.lock().unwrap().remove(id)
-            }
+            _ => {}
         }
     }
 
@@ -96,29 +96,35 @@ impl NotificationManager {
             let widget = build_card(&notif, &mut history_entry, &m.config, mgr);
             m.history.lock().unwrap().push(&history_entry);
 
-            // Prepend so the newest notification appears at the top.
-            m.vbox.prepend(&widget);
+            let status_bool = m.status.lock().unwrap().clone();
 
-            let mut entry = ActiveNotification {
-                notif,
-                widget,
-                timeout_source: None,
-            };
+            if !status_bool {
+                // Prepend so the newest notification appears at the top.
+                m.vbox.prepend(&widget);
 
-            if let Some(ms) = timeout_ms {
-                let id = entry.notif.id;
-                let mgr_weak = Rc::downgrade(mgr);
-                let src =
-                    glib::timeout_add_local_once(std::time::Duration::from_millis(ms), move || {
-                        if let Some(m) = mgr_weak.upgrade() {
-                            m.borrow_mut().close(id, CloseReason::Expired);
-                        }
-                    });
-                entry.timeout_source = Some(src);
+                let mut entry = ActiveNotification {
+                    notif,
+                    widget,
+                    timeout_source: None,
+                };
+
+                if let Some(ms) = timeout_ms {
+                    let id = entry.notif.id;
+                    let mgr_weak = Rc::downgrade(mgr);
+                    let src = glib::timeout_add_local_once(
+                        std::time::Duration::from_millis(ms),
+                        move || {
+                            if let Some(m) = mgr_weak.upgrade() {
+                                m.borrow_mut().close(id, CloseReason::Expired);
+                            }
+                        },
+                    );
+                    entry.timeout_source = Some(src);
+                }
+
+                m.active.insert(0, entry);
+                m.sync_visibility();
             }
-
-            m.active.insert(0, entry);
-            m.sync_visibility();
         }
     }
 

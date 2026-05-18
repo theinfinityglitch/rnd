@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use serde_json::Value;
 use zbus::Proxy;
 
@@ -30,6 +30,13 @@ enum Command {
         /// Action key to invoke
         action_key: String,
     },
+    /// Check the pause status
+    IsPaused,
+    /// Set the pause status
+    SetPaused {
+        #[arg(value_enum)]
+        status: SetPauseValue,
+    },
     /// Read or clear the notification history
     History {
         #[command(subcommand)]
@@ -42,6 +49,13 @@ enum Command {
     Info,
     /// Print the daemon capabilities reported over D-Bus
     Capabilities,
+}
+
+#[derive(Clone, ValueEnum)]
+enum SetPauseValue {
+    False,
+    True,
+    Toggle,
 }
 
 #[derive(Subcommand)]
@@ -63,6 +77,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Command::Close { id } => close_notification(id).await?,
         Command::CloseAll => close_all().await?,
         Command::Action { id, action_key } => invoke_action(id, action_key).await?,
+        Command::IsPaused => is_paused().await?,
+        Command::SetPaused { status } => set_paused(status).await?,
         Command::History { subcommand, limit } => match subcommand {
             Some(HistoryCommand::Clear) => clear_history().await?,
             Some(HistoryCommand::Remove { id }) => remove_message(id).await?,
@@ -96,14 +112,14 @@ async fn control_proxy() -> Result<Proxy<'static>, Box<dyn Error>> {
 async fn close_notification(id: u32) -> Result<(), Box<dyn Error>> {
     let proxy = notification_proxy().await?;
     proxy.call_method("CloseNotification", &(id)).await?;
-    println!("Closed notification {}", id);
+
     Ok(())
 }
 
 async fn close_all() -> Result<(), Box<dyn Error>> {
     let proxy = control_proxy().await?;
     proxy.call_method("CloseAllNotifications", &()).await?;
-    println!("Requested close for all active notifications.");
+
     Ok(())
 }
 
@@ -113,6 +129,32 @@ async fn invoke_action(id: u32, action_key: String) -> Result<(), Box<dyn Error>
         .call_method("InvokeAction", &(id, action_key.clone()))
         .await?;
     println!("Invoked action {} on notification {}", action_key, id);
+    Ok(())
+}
+
+async fn is_paused() -> Result<(), Box<dyn Error>> {
+    let proxy = control_proxy().await?;
+    let result: String = proxy
+        .call_method("IsPaused", &())
+        .await?
+        .body()
+        .deserialize_unchecked()?;
+
+    println!("{}", result);
+
+    Ok(())
+}
+
+async fn set_paused(status: SetPauseValue) -> Result<(), Box<dyn Error>> {
+    let proxy = control_proxy().await?;
+    let status_str = match status {
+        SetPauseValue::False => "false",
+        SetPauseValue::True => "true",
+        SetPauseValue::Toggle => "toggle",
+    };
+
+    proxy.call_method("SetPause", &(status_str)).await?;
+
     Ok(())
 }
 
@@ -151,13 +193,14 @@ fn notif_limit_slice(notifs: &mut Vec<Value>, limit: usize) {
 async fn clear_history() -> Result<(), Box<dyn Error>> {
     let proxy = control_proxy().await?;
     proxy.call_method("ClearHistory", &()).await?;
-    println!("History cleared.");
+
     Ok(())
 }
 
 async fn remove_message(id: Option<u32>) -> Result<(), Box<dyn Error>> {
     let proxy = control_proxy().await?;
-    proxy.call_method("HistoryRemove", &id).await?;
+    proxy.call_method("HistoryRemove", &(id)).await?;
+
     Ok(())
 }
 

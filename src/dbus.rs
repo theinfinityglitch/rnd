@@ -18,6 +18,8 @@ pub enum DaemonEvent {
     Close(u32),
     CloseAll,
     InvokeAction { id: u32, action_key: String },
+    IsPaused,
+    SetPause { status: String },
     ClearHistory,
     HistoryRemove { id: Option<u32> },
 }
@@ -107,10 +109,28 @@ impl NotificationServer {
 struct ControlServer {
     tx: Sender<DaemonEvent>,
     history: Arc<Mutex<History>>,
+    paused: Arc<Mutex<bool>>,
 }
 
 #[interface(name = "org.rnd.Control")]
 impl ControlServer {
+    async fn is_paused(&self) -> String {
+        let status_bool = self.paused.lock().unwrap();
+
+        format!("{}", *status_bool)
+    }
+
+    async fn set_pause(&self, status: String) {
+        let mut status_bool = self.paused.lock().unwrap();
+
+        match status.as_str() {
+            "false" => *status_bool = false,
+            "true" => *status_bool = true,
+            "toggle" => *status_bool = !*status_bool,
+            _ => {}
+        }
+    }
+
     async fn get_history(&self) -> String {
         let history = self.history.lock().unwrap();
         let mut notifications = Vec::new();
@@ -261,6 +281,7 @@ pub async fn run(
     event_tx: Sender<DaemonEvent>,
     mut signal_rx: UnboundedReceiver<DaemonSignal>,
     startup_tx: std::sync::mpsc::SyncSender<Result<(), String>>,
+    status: Arc<Mutex<bool>>,
     history: Arc<Mutex<History>>,
 ) -> zbus::Result<()> {
     let server = NotificationServer {
@@ -275,6 +296,7 @@ pub async fn run(
             let control = ControlServer {
                 tx: event_tx.clone(),
                 history: Arc::clone(&history),
+                paused: Arc::clone(&status),
             };
             builder.serve_at(CONTROL_PATH, control)
         }) {
