@@ -19,6 +19,7 @@ pub enum DaemonEvent {
     CloseAll,
     InvokeAction { id: u32, action_key: String },
     ClearHistory,
+    HistoryRemove { id: Option<u32> },
 }
 
 #[derive(Debug)]
@@ -205,6 +206,10 @@ impl ControlServer {
 
     async fn clear_history(&self) {
         self.history.lock().unwrap().clear();
+    }
+
+    async fn history_remove(&self, id: Option<u32>) {
+        self.history.lock().unwrap().remove(id);
     }
 
     async fn close_all_notifications(&self) {

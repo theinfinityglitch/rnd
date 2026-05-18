@@ -51,6 +51,11 @@ enum Command {
 enum HistoryCommand {
     /// Clear the in-memory history
     Clear,
+    /// Remove the last notification or the specified notification by ID
+    Remove {
+        /// Notification ID
+        id: Option<u32>,
+    },
 }
 
 #[tokio::main]
@@ -63,6 +68,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Command::Action { id, action_key } => invoke_action(id, action_key).await?,
         Command::History { subcommand, limit } => match subcommand {
             Some(HistoryCommand::Clear) => clear_history().await?,
+            Some(HistoryCommand::Remove { id }) => remove_message(id).await?,
             None => print_history(limit).await?,
         },
         Command::Info => print_server_info().await?,
@@ -149,6 +155,12 @@ async fn clear_history() -> Result<(), Box<dyn Error>> {
     let proxy = control_proxy().await?;
     proxy.call_method("ClearHistory", &()).await?;
     println!("History cleared.");
+    Ok(())
+}
+
+async fn remove_message(id: Option<u32>) -> Result<(), Box<dyn Error>> {
+    let proxy = control_proxy().await?;
+    proxy.call_method("HistoryRemove", &id).await?;
     Ok(())
 }
 

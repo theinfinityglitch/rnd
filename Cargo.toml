@@ -6,7 +6,10 @@ rnd = { path = "." }
 gtk4 = { version = "0.11", features = ["v4_8"] }
 async-channel = "2"
 gtk4-layer-shell = { version = "0.8", features = ["v1_3"] }
-zbus = { version = "4", default-features = false, features = ["tokio"] }
+zbus = { version = "4", default-features = false, features = [
+    "tokio",
+    "option-as-array",
+] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

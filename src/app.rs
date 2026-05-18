@@ -71,10 +71,11 @@ impl NotificationManager {
                 mgr.borrow_mut().close_all();
             }
             DaemonEvent::InvokeAction { id, action_key } => {
-                mgr.borrow_mut().invoke_action(id, action_key);
+                mgr.borrow_mut().invoke_action(id, action_key)
             }
-            DaemonEvent::ClearHistory => {
-                mgr.borrow_mut().history.lock().unwrap().clear();
+            DaemonEvent::ClearHistory => mgr.borrow_mut().history.lock().unwrap().clear(),
+            DaemonEvent::HistoryRemove { id } => {
+                mgr.borrow_mut().history.lock().unwrap().remove(id)
             }
         }
     }
@@ -415,7 +416,7 @@ fn build_icon(app_icon: &str, hints: &HashMap<String, OwnedValue>, config: &Conf
         return wrap_image(img);
     }
 
-    if let Some(img) = icon_from_path(app_icon, config) {
+    if let Some(img) = icon_from_path(app_icon) {
         return wrap_image(img);
     }
 
@@ -461,7 +462,7 @@ fn hint_key_might_be_icon(key: &str) -> bool {
 fn icon_from_hint_value(key: &str, value: &OwnedValue, config: &Config) -> Option<Image> {
     if let Ok(owned_value) = value.try_clone() {
         if let Ok(path) = String::try_from(owned_value) {
-            if let Some(img) = icon_from_path(&path, config) {
+            if let Some(img) = icon_from_path(&path) {
                 return Some(img);
             }
             if !path.is_empty() {
@@ -602,7 +603,7 @@ fn image_from_raw_bytes(bytes: &[u8], _config: &Config) -> Option<Image> {
     None
 }
 
-fn icon_from_path(name_or_path: &str, config: &Config) -> Option<Image> {
+fn icon_from_path(name_or_path: &str) -> Option<Image> {
     const ICON_FALLBACK: i32 = 64;
 
     if name_or_path.is_empty() {

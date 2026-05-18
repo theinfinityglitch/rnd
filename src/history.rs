@@ -90,6 +90,14 @@ impl History {
         }
     }
 
+    pub fn pop(&mut self) {
+        self.entries.pop_front();
+
+        if self.persist {
+            self.save();
+        }
+    }
+
     pub fn entries(&self) -> impl Iterator<Item = &HistoryEntry> {
         self.entries.iter()
     }
@@ -106,6 +114,15 @@ impl History {
         self.entries.clear();
         if self.persist {
             self.save();
+        }
+    }
+
+    pub fn remove(&mut self, id: Option<u32>) {
+        match id {
+            Some(id) => {
+                self.entries.retain(|e| e.id != id);
+            }
+            None => self.pop(),
         }
     }
 
