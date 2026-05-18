@@ -98,13 +98,11 @@ impl NotificationServer {
             expire_timeout,
         );
 
-        tracing::debug!("Notify id={} summary={:?}", id, notif.summary);
         self.tx.send(DaemonEvent::Show(notif)).await.ok();
         id
     }
 
     async fn close_notification(&self, id: u32) {
-        tracing::debug!("CloseNotification id={}", id);
         self.tx.send(DaemonEvent::Close(id)).await.ok();
     }
 }
@@ -314,11 +312,9 @@ pub async fn run(
         while let Some(signal) = signal_rx.recv().await {
             let res = match signal {
                 DaemonSignal::NotificationClosed { id, reason } => {
-                    tracing::debug!("Emitting NotificationClosed id={} reason={}", id, reason);
                     emit_signal(&conn_sig, "NotificationClosed", &(id, reason)).await
                 }
                 DaemonSignal::ActionInvoked { id, ref action_key } => {
-                    tracing::debug!("Emitting ActionInvoked id={} key={}", id, action_key);
                     emit_signal(&conn_sig, "ActionInvoked", &(id, action_key.as_str())).await
                 }
             };

@@ -431,13 +431,13 @@ fn build_icon(app_icon: &str, hints: &HashMap<String, OwnedValue>, config: &Conf
 
 fn icon_from_hints(hints: &HashMap<String, OwnedValue>, config: &Config) -> Option<Image> {
     if let Some(value) = hints.get("image-path") {
-        if let Some(img) = icon_from_hint_value("image-path", value, config) {
+        if let Some(img) = icon_from_hint_value(value, config) {
             return Some(img);
         }
     }
 
     if let Some(value) = hints.get("image-data") {
-        if let Some(img) = icon_from_hint_value("image-data", value, config) {
+        if let Some(img) = icon_from_hint_value(value, config) {
             return Some(img);
         }
     }
@@ -446,7 +446,7 @@ fn icon_from_hints(hints: &HashMap<String, OwnedValue>, config: &Config) -> Opti
         if !hint_key_might_be_icon(key) {
             continue;
         }
-        if let Some(img) = icon_from_hint_value(key, value, config) {
+        if let Some(img) = icon_from_hint_value(value, config) {
             return Some(img);
         }
     }
@@ -459,7 +459,7 @@ fn hint_key_might_be_icon(key: &str) -> bool {
     key.contains("image") || key.contains("icon") || key.contains("app_icon")
 }
 
-fn icon_from_hint_value(key: &str, value: &OwnedValue, config: &Config) -> Option<Image> {
+fn icon_from_hint_value(value: &OwnedValue, config: &Config) -> Option<Image> {
     if let Ok(owned_value) = value.try_clone() {
         if let Ok(path) = String::try_from(owned_value) {
             if let Some(img) = icon_from_path(&path) {
@@ -486,20 +486,12 @@ fn icon_from_hint_value(key: &str, value: &OwnedValue, config: &Config) -> Optio
 
     if let Ok(owned_value) = value.try_clone() {
         if let Ok(structure) = Structure::try_from(owned_value) {
-            // tracing::debug!(
-            //     hint=%key,
-            //     signature=%structure.full_signature().as_str(),
-            //     fields=%structure.fields().len(),
-            //     "image-data structure received"
-            // );
             if let Some(img) = image_from_image_data_structure(structure, config) {
                 return Some(img);
             }
-            tracing::debug!(hint=%key, "image-data structure parse failed");
         }
     }
 
-    tracing::debug!(hint=%key, "hint value could not be converted to an image");
     None
 }
 
@@ -507,19 +499,7 @@ fn image_from_image_data_structure(structure: Structure, _config: &Config) -> Op
     if let Ok((width, height, rowstride, has_alpha, bits, channels, data)) =
         <(i32, i32, i32, bool, i32, i32, Vec<u8>)>::try_from(structure)
     {
-        // tracing::debug!(
-        //     width = width,
-        //     height = height,
-        //     rowstride = rowstride,
-        //     has_alpha = has_alpha,
-        //     bits = bits,
-        //     channels = channels,
-        //     byte_count = data.len(),
-        //     "decoded image-data structure"
-        // );
-
         if width <= 0 || height <= 0 || bits != 8 {
-            tracing::debug!("unsupported image-data dimensions or bits");
             return None;
         }
 
@@ -543,7 +523,6 @@ fn image_from_image_data_structure(structure: Structure, _config: &Config) -> Op
         );
 
         if pixbuf.width() == 0 || pixbuf.height() == 0 {
-            tracing::debug!("image-data pixbuf created with zero size");
             return None;
         }
 
@@ -558,21 +537,12 @@ fn image_from_image_data_structure(structure: Structure, _config: &Config) -> Op
             } else {
                 pixbuf
             };
-
-        tracing::debug!(
-            final_width = img_pix.width(),
-            final_height = img_pix.height(),
-            channels = img_pix.n_channels(),
-            "image-data pixbuf ready"
-        );
-
         let img = Image::from_pixbuf(Some(&img_pix));
         img.set_pixel_size(img_pix.width());
         img.add_css_class("notification-icon");
         return Some(img);
     }
 
-    tracing::debug!("image-data structure did not match expected tuple");
     None
 }
 
@@ -626,21 +596,11 @@ fn icon_from_path(name_or_path: &str) -> Option<Image> {
             let desired_w = (w as f64 / scale_factor).round() as i32;
             let desired_h = (h as f64 / scale_factor).round() as i32;
             if let Some(pb) = pb_full.scale_simple(desired_w, desired_h, InterpType::Bilinear) {
-                tracing::debug!(
-                    final_width = pb.width(),
-                    final_height = pb.height(),
-                    "icon_from_path pixbuf ready (scaled)"
-                );
                 let img = Image::from_pixbuf(Some(&pb));
                 img.set_pixel_size(max_icon_size);
                 img.add_css_class("notification-icon");
                 return Some(img);
             }
-            tracing::debug!(
-                final_width = pb_full.width(),
-                final_height = pb_full.height(),
-                "icon_from_path pixbuf ready (full)"
-            );
             let img = Image::from_pixbuf(Some(&pb_full));
             img.set_pixel_size(ICON_FALLBACK);
             img.add_css_class("notification-icon");
